@@ -8,9 +8,13 @@ from __future__ import annotations
 
 import re
 from io import StringIO
+from pathlib import Path
 
 import pandas as pd
 import requests
+
+_DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+_LOCAL_CSV = _DATA_DIR / "pld_historico.csv"
 
 _DATASET_URL = "https://dadosabertos.ccee.org.br/dataset/pld_media_mensal"
 _HEADERS = {
@@ -88,35 +92,52 @@ def _discover_download_urls(session: requests.Session) -> dict[str, str]:
     return _FALLBACK_URLS
 
 
-def fetch_pld() -> pd.DataFrame:
-    """Baixa todos os CSVs de PLD médio mensal e consolida em um DataFrame.
-
-    Usa sessão HTTP com cookies do portal para bypasear o WAF da CCEE.
-    """
-    session = _get_session()
-    urls = _discover_download_urls(session)
-
-    dfs: list[pd.DataFrame] = []
-    for _name, url in urls.items():
-        resp = session.get(url, timeout=30)
-        resp.raise_for_status()
-        df = pd.read_csv(StringIO(resp.text), sep=";", encoding="latin-1")
-        dfs.append(df)
-
-    raw = pd.concat(dfs, ignore_index=True)
-
+def _parse_raw(raw: pd.DataFrame) -> pd.DataFrame:
+    """Normaliza o DataFrame bruto da CCEE."""
     raw["data"] = pd.to_datetime(raw["MES_REFERENCIA"].astype(str), format="%Y%m")
     raw["submercado"] = raw["SUBMERCADO"].str.strip()
     raw["pld"] = raw["PLD_MEDIA_MES"].astype(float)
     raw["ano"] = raw["data"].dt.year
     raw["mes"] = raw["data"].dt.month
-
-    df = (
+    return (
         raw[["data", "submercado", "pld", "ano", "mes"]]
         .sort_values(["data", "submercado"])
         .reset_index(drop=True)
     )
-    return df
+
+
+def _fetch_from_api() -> pd.DataFrame | None:
+    """Tenta baixar dados frescos da CCEE. Retorna None se falhar."""
+    try:
+        session = _get_session()
+        urls = _discover_download_urls(session)
+
+        dfs: list[pd.DataFrame] = []
+        for _name, url in urls.items():
+            resp = session.get(url, timeout=30)
+            resp.raise_for_status()
+            df = pd.read_csv(StringIO(resp.text), sep=";", encoding="latin-1")
+            dfs.append(df)
+
+        return _parse_raw(pd.concat(dfs, ignore_index=True))
+    except Exception:
+        return None
+
+
+def fetch_pld() -> pd.DataFrame:
+    """Carrega dados de PLD. Tenta API da CCEE, fallback para CSV local."""
+    df = _fetch_from_api()
+    if df is not None and len(df) > 0:
+        if _LOCAL_CSV.parent.exists():
+            df.to_csv(_LOCAL_CSV, index=False)
+        return df
+
+    if _LOCAL_CSV.exists():
+        return pd.read_csv(_LOCAL_CSV, parse_dates=["data"])
+
+    raise RuntimeError(
+        "Não foi possível carregar dados da CCEE e nenhum cache local encontrado."
+    )
 
 
 def pld_atual(df: pd.DataFrame) -> pd.DataFrame:
