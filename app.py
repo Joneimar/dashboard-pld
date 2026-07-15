@@ -7,7 +7,7 @@ Desenvolvido por Joneimar Lemos · energycode.com.br
 import streamlit as st
 
 st.set_page_config(
-    page_title="PLD — Preço de Liquidação das Diferenças",
+    page_title="PLD — Dashboard",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -80,6 +80,27 @@ def load_data() -> pd.DataFrame:
     return fetch_pld()
 
 
+# ── Sidebar ──────────────────────────────────────────────────────────────────
+with st.sidebar:
+    st.markdown("## 📊 PLD — Dashboard")
+
+    st.markdown("---")
+
+    st.markdown("""
+    <div class="info-box">
+        <strong>O que é o PLD?</strong><br><br>
+        O Preço de Liquidação das Diferenças (PLD) é o preço spot
+        da energia elétrica no Brasil. Calculado diariamente pela CCEE
+        com base no Custo Marginal de Operação (CMO), ele reflete o
+        custo de produzir mais uma unidade de energia no sistema.<br><br>
+        O PLD é o principal indicador do mercado de curto prazo e
+        impacta diretamente as operações de <strong>trading</strong>,
+        contratos bilaterais e a receita de geradores.<br><br>
+        <strong>Submercados:</strong> Sudeste/CO, Sul, Nordeste e Norte.
+    </div>
+    """, unsafe_allow_html=True)
+
+
 # ── Dados ────────────────────────────────────────────────────────────────────
 with st.spinner("Buscando dados de PLD na CCEE..."):
     try:
@@ -93,7 +114,7 @@ atual = pld_atual(df)
 data_ref = df["data"].max()
 
 # ── Header ───────────────────────────────────────────────────────────────────
-st.markdown("# 📊 Dashboard — PLD · Preço de Liquidação das Diferenças")
+st.markdown("# 📊 Dashboard — PLD")
 st.markdown(
     "Análise do Preço de Liquidação das Diferenças (PLD) do mercado de energia elétrica brasileiro, "
     "com dados consolidados por submercado desde 2001. Fonte: Dados Abertos da CCEE."
