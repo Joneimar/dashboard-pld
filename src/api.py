@@ -19,7 +19,19 @@ _HEADERS = {
     "Accept-Language": "pt-BR,pt;q=0.8,en-US;q=0.5,en;q=0.3",
     "Accept-Encoding": "gzip, deflate, br",
     "Connection": "keep-alive",
+    "Referer": "https://dadosabertos.ccee.org.br/",
 }
+
+
+def _get_session() -> requests.Session:
+    """Cria sessão HTTP com cookies do portal (bypassa WAF)."""
+    s = requests.Session()
+    s.headers.update(_HEADERS)
+    try:
+        s.get(_DATASET_URL, timeout=15)
+    except requests.RequestException:
+        pass
+    return s
 
 _FALLBACK_URLS: dict[str, str] = {
     "pld_media_mensal_2001_2020": "https://pda-download.ccee.org.br/f0XoqvKpQGyTE_eXw1LJvw/content",
@@ -41,14 +53,14 @@ CORES_SUBMERCADO: dict[str, str] = {
 }
 
 
-def _discover_download_urls() -> dict[str, str]:
+def _discover_download_urls(session: requests.Session) -> dict[str, str]:
     """Descobre URLs de download dos CSVs no portal da CCEE via scraping.
 
     Se o portal estiver indisponível ou bloqueado por WAF,
     usa URLs de fallback previamente mapeadas.
     """
     try:
-        resp = requests.get(_DATASET_URL, headers=_HEADERS, timeout=15)
+        resp = session.get(_DATASET_URL, timeout=15)
         resp.raise_for_status()
 
         resource_ids = list(
@@ -60,8 +72,8 @@ def _discover_download_urls() -> dict[str, str]:
 
         urls: dict[str, str] = {}
         for i, rid in enumerate(resource_ids):
-            resp_r = requests.get(
-                f"{_DATASET_URL}/resource/{rid}", headers=_HEADERS, timeout=15
+            resp_r = session.get(
+                f"{_DATASET_URL}/resource/{rid}", timeout=15
             )
             download = re.findall(r'href="(https://pda-download[^"]+)"', resp_r.text)
             name = titles[i] if i < len(titles) else f"resource_{i}"
@@ -79,16 +91,14 @@ def _discover_download_urls() -> dict[str, str]:
 def fetch_pld() -> pd.DataFrame:
     """Baixa todos os CSVs de PLD médio mensal e consolida em um DataFrame.
 
-    Returns
-    -------
-    pd.DataFrame
-        Colunas: data, submercado, pld (R$/MWh), ano, mes.
+    Usa sessão HTTP com cookies do portal para bypasear o WAF da CCEE.
     """
-    urls = _discover_download_urls()
+    session = _get_session()
+    urls = _discover_download_urls(session)
 
     dfs: list[pd.DataFrame] = []
     for _name, url in urls.items():
-        resp = requests.get(url, headers=_HEADERS, timeout=30)
+        resp = session.get(url, timeout=30)
         resp.raise_for_status()
         df = pd.read_csv(StringIO(resp.text), sep=";", encoding="latin-1")
         dfs.append(df)
