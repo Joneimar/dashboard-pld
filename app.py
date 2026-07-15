@@ -80,34 +80,6 @@ def load_data() -> pd.DataFrame:
     return fetch_pld()
 
 
-# ── Sidebar ──────────────────────────────────────────────────────────────────
-with st.sidebar:
-    st.markdown("## 📊 PLD — Dashboard")
-    st.caption("Dados: [CCEE — Dados Abertos](https://dadosabertos.ccee.org.br/)")
-
-    st.markdown("---")
-
-    st.markdown("""
-    <div class="info-box">
-        <strong>O que é o PLD?</strong><br><br>
-        O Preço de Liquidação das Diferenças (PLD) é o preço spot
-        da energia elétrica no Brasil. Calculado diariamente pela CCEE
-        com base no Custo Marginal de Operação (CMO), ele reflete o
-        custo de produzir mais uma unidade de energia no sistema.<br><br>
-        O PLD é o principal indicador do mercado de curto prazo e
-        impacta diretamente as operações de <strong>trading</strong>,
-        contratos bilaterais e a receita de geradores.<br><br>
-        <strong>Submercados:</strong> Sudeste/CO, Sul, Nordeste e Norte.
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown("---")
-    st.markdown(
-        "Desenvolvido por [Joneimar Lemos](https://energycode.com.br)  \n"
-        "Dados atualizados via CCEE"
-    )
-
-
 # ── Dados ────────────────────────────────────────────────────────────────────
 with st.spinner("Buscando dados de PLD na CCEE..."):
     try:
@@ -234,5 +206,11 @@ Custo Marginal de Operação (CMO), determinado pelos modelos computacionais NEW
 a série de médias mensais para manter a comparabilidade com dados históricos.
 """)
 
-st.markdown("---")
-st.caption("📊 Dashboard de PLD · Desenvolvido por Joneimar Lemos · energycode.com.br")
+st.divider()
+st.markdown(
+    '<div style="text-align:center; color:#71717a; font-size:0.85rem; padding:1rem 0;">'
+    '📊 Dashboard de PLD · Desenvolvido por Joneimar Lemos · '
+    '<a href="https://energycode.com.br" target="_blank" style="color:#3b82f6; text-decoration:none;">energycode.com.br</a>'
+    '</div>',
+    unsafe_allow_html=True,
+)
